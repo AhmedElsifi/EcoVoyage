@@ -25,11 +25,23 @@ class Guides
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getById($guideId)
+    // public function getById($guideId)
+    // {
+    //     $query = $this->db->prepare("SELECT * FROM guides WHERE guide_id = :id");
+    //     $query->execute(['id' => $guideId]);
+    //     return $query->fetch(PDO::FETCH_ASSOC);
+    // }
+
+    public function getById($id)
     {
-        $query = $this->db->prepare("SELECT * FROM guides WHERE guide_id = :id");
-        $query->execute(['id' => $guideId]);
-        return $query->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->db->prepare(
+            "SELECT g.*, u.name 
+         FROM guides g 
+         JOIN users u ON g.guide_id = u.user_id 
+         WHERE g.guide_id = :id"
+        );
+        $stmt->execute(['id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 

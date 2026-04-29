@@ -181,22 +181,18 @@ class AuthController
 
     public function login()
     {
-        // If already logged in, redirect to role dashboard
         if (isset($_SESSION['user_id'])) {
             $this->redirectByRole($_SESSION['role']);
         }
 
-        // Show the form for GET requests
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             View::load('auth/login', ['errors' => []]);
             return;
         }
 
-        // Handle POST (form submission)
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        // Basic validation
         $errors = [];
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Please enter a valid email.';
@@ -211,9 +207,7 @@ class AuthController
             return;
         }
 
-        // Attempt login
         if ($this->usersModel->login($email, $password)) {
-            // Redirect to role-specific dashboard
             $this->redirectByRole($_SESSION['role']);
         } else {
             $errors[] = 'Invalid email or password.';
@@ -221,24 +215,47 @@ class AuthController
         }
     }
 
-    // Helper to redirect based on role (optional but clean)
     private function redirectByRole($role)
     {
         switch ($role) {
             case 'super_admin':
-                View::load('admin/dashboard');
+                header('Location: ' . BASE_URL . 'admin/dashboard');
                 break;
             case 'regional_auditor':
-                View::load('auditor/dashboard');
+                header('Location: ' . BASE_URL . 'auditor/dashboard');
                 break;
             case 'guide':
-                View::load('guide/dashboard');
+                header('Location: ' . BASE_URL . 'guide/dashboard');
                 break;
             case 'traveler':
-                View::load('traveler/dashboard');
+                header('Location: ' . BASE_URL . 'traveler/dashboard');
                 break;
             default:
-                View::load('guest/index');
+                header('Location: ' . BASE_URL . 'guest/index');
         }
+        exit;
+    }
+
+    public function logout()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
+        session_destroy();
+        
+        header('Location: ' . BASE_URL . 'guest/index');
     }
 }

@@ -5,12 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $title ?? 'EcoVoyage' ?></title>
-
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Friendly font -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -72,30 +68,38 @@
             margin-top: 2rem;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
         }
+
+        .navbar-eco .btn-outline-light:focus {
+            background-color: #fff;
+            color: #2d6a4f;
+        }
     </style>
 </head>
 
 <body>
-
+    <?php
+    $rolePaths = [
+        'super_admin' => 'admin',
+        'regional_auditor' => 'auditor',
+        'guide' => 'guide',
+        'traveler' => 'traveler',
+    ];
+    $rolePrefix = isset($_SESSION['user_id']) ? $rolePaths[$_SESSION['role']] : 'guest';
+    ?>
     <nav class="navbar navbar-expand-lg navbar-eco mb-4">
         <div class="container">
-            <!-- Brand (left) -->
-            <a class="navbar-brand" href="<?= BASE_URL ?>">
+            <a class="navbar-brand"
+                href="<?= isset($_SESSION['user_id']) ? BASE_URL . $rolePrefix . '/dashboard' : BASE_URL ?>">
                 <i class="bi bi-tree-fill"></i>EcoVoyage
             </a>
-
-            <!-- Toggler for mobile -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
                 style="border-color: rgba(255,255,255,0.5);">
                 <span class="navbar-toggler-icon"></span>
             </button>
-
-            <!-- Right-aligned content: navigation links + user info -->
             <div class="collapse navbar-collapse" id="mainNav">
-                <!-- ml-auto pushes this group to the right -->
                 <div class="d-flex ms-auto align-items-center">
                     <ul class="navbar-nav me-2">
-                        <?php if (!isset($_SESSION['user_id'])): // GUEST ?>
+                        <?php if (!isset($_SESSION['user_id'])): ?>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guest/index">Home</a></li>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guest/tours">Browse Tours</a></li>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>auth/register">Register</a></li>
@@ -115,6 +119,7 @@
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>traveler/bookings">My Bookings</a>
                             </li>
 
+
                         <?php elseif ($_SESSION['role'] == 'guide'): ?>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guide/dashboard">Guide Panel</a>
                             </li>
@@ -126,18 +131,31 @@
                             </li>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>auditor/reports">Reports</a></li>
                         <?php endif; ?>
+                        <?php if (isset($_SESSION['user_id'])): ?>
+                            <li class="nav-item dropdown">
+                                <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2"
+                                    type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-person-circle fs-5"></i>
+                                    <span><?= htmlspecialchars($_SESSION['user_name']) ?></span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="<?= BASE_URL . $rolePrefix ?>/settings">
+                                            <i class="bi bi-gear me-2"></i> Account Settings
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="<?= BASE_URL ?>auth/logout">
+                                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        <?php endif; ?>
                     </ul>
-
-                    <!-- User info + logout (only if logged in) -->
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <span class="navbar-text me-2">
-                            <i class="bi bi-person-circle"></i> <?= $_SESSION['user_name'] ?>
-                            <span class="badge bg-light text-dark ms-1"><?= $_SESSION['role'] ?></span>
-                        </span>
-                        <a href="<?= BASE_URL ?>auth/logout" class="btn btn-outline-light btn-sm">
-                            <i class="bi bi-box-arrow-right"></i> Logout
-                        </a>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>

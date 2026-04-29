@@ -17,6 +17,11 @@ class Users
         return (int) $query->fetchColumn();
     }
 
+    public function hasRole($role)
+    {
+        return isset($_SESSION['role']) && $_SESSION['role'] === $role;
+    }
+
     public function register($data)
     {
         $stmt = $this->db->prepare(
@@ -102,6 +107,52 @@ class Users
         }
 
         return false;
+    }
+
+    public function login($email, $password)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = :email");
+        $stmt->execute(['email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && password_verify($password, $user['password_hash'])) {
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['user_name'] = $user['name'];
+            return true;
+        }
+        return false;
+    }
+
+    public function getById($id)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = :id");
+        $stmt->execute(['id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function update($userId, $data)
+    {
+        $fields = [];
+        $values = [];
+        foreach (['name', 'phone'] as $col) {
+            if (array_key_exists($col, $data)) {
+                $fields[] = "$col = :$col";
+                $values[$col] = $data[$col];
+            }
+        }
+        if (array_key_exists('password', $data)) {
+            $fields[] = "password_hash = :password";
+            $values['password'] = $data['password'];
+        }
+
+        if (empty($fields))
+            return true;
+
+        $values['user_id'] = $userId;
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($values);
     }
 }
 

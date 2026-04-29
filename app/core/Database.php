@@ -36,7 +36,6 @@ class Database
         return $this->connection;
     }
 
-    // Prevent cloning
     private function __clone()
     {
     }

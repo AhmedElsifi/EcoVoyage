@@ -14,5 +14,3 @@ define("UPLOADS", ROOT_PATH . 'public' . DS . 'uploads' . DS);
 $modules = [ROOT_PATH, APP, CORE, VIEWS, CONTROLLERS, MODELS, CONFIG];
 set_include_path(get_include_path() . PATH_SEPARATOR . implode(PATH_SEPARATOR, $modules));
 spl_autoload_register('spl_autoload');
-
-// new App();

@@ -80,6 +80,20 @@ class Tours
         return $query->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function getTourVersions($id)
+    {
+        $query = $this->db->prepare("SELECT * FROM {$this->table} JOIN tour_versions ON {$this->table}.tour_id = tour_versions.tour_id WHERE {$this->table}.tour_id = :id");
+        $query->execute(["id" => $id]);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTourAddons($id)
+    {
+        $query = $this->db->prepare("SELECT * FROM {$this->table} JOIN addons ON {$this->table}.tour_id = addons.tour_id WHERE {$this->table}.tour_id = :id");
+        $query->execute(["id" => $id]);
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getTourTypes()
     {
         return [

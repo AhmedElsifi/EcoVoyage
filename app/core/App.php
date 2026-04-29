@@ -19,24 +19,21 @@ class App
      * extract controller, method and parameters
      * @return void
      */
-    private function prepareURL()
-    {
-        $url = $_SERVER["QUERY_STRING"];
+private function prepareURL()
+{
+    $url = $_GET['url'] ?? '';
 
-        if (!empty($url)) {
-            $url = trim($url, '/');
-            $url = explode("/", $url);
+    if (!empty($url)) {
+        $url = trim($url, '/');
+        $url = explode("/", $url);
 
-            // define the controller
-            $this->controller = isset($url[0]) ? ucwords($url[0]) . "Controller" : "HomeController";
-            // define the action
-            $this->action = isset($url[1]) ? $url[1] : "index";
-            // define the params
-            unset($url[0], $url[1]);
+        $this->controller = isset($url[0]) ? ucwords($url[0]) . "Controller" : "GuestController";
+        $this->action = isset($url[1]) ? $url[1] : "index";
 
-            $this->params = !empty($url) ? array_values($url) : [];
-        }
+        unset($url[0], $url[1]);
+        $this->params = !empty($url) ? array_values($url) : [];
     }
+}
 
     private function render()
     {
