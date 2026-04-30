@@ -55,7 +55,7 @@ class Bookings
             'tour_version_id' => $data['tour_version_id'],
             'carbon_offset' => $data['carbon_offset'] ?? 0,
             'start_time' => $data['start_time'],
-            'status' => $status,                     
+            'status' => $status,
             'selected_addons' => $data['selected_addons'] ?? '[]',
             'total_price' => $data['total_price'] ?? 0,
             'num_travelers' => $data['num_travelers'] ?? 1
@@ -124,6 +124,23 @@ class Bookings
         );
         $stmt->execute(['tid' => $travelerId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getNextBookingForGuide($guideId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT b.booking_id, b.start_time, t.tour_id, t.tour_name
+         FROM bookings b
+         JOIN tour_versions tv ON b.tour_version_id = tv.tour_version_id
+         JOIN tours t ON tv.tour_id = t.tour_id
+         WHERE b.guide_id = :gid
+           AND b.status = 'confirmed'
+           AND b.start_time >= NOW()
+         ORDER BY b.start_time ASC
+         LIMIT 1"
+        );
+        $stmt->execute(['gid' => $guideId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 

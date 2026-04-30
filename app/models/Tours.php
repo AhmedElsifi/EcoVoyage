@@ -129,5 +129,29 @@ class Tours
         return min(5, $leaves);
     }
 
+    public function countByGuideAndStatus($guideId, $status)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE guide_id = :gid AND status = :status"
+        );
+        $stmt->execute(['gid' => $guideId, 'status' => $status]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function getLatestByGuide($guideId, $limit = 10)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT t.*, l.location_name, l.country
+         FROM {$this->table} t
+         JOIN locations l ON t.location_id = l.location_id
+         WHERE t.guide_id = :gid
+         ORDER BY t.tour_id DESC
+         LIMIT :limit"
+        );
+        $stmt->bindValue(':gid', $guideId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
