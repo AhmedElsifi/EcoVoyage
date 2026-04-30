@@ -19,7 +19,7 @@
                 <div>
                     <h4 class="fw-bold text-success mb-1">Booking #<?= $booking['booking_id'] ?></h4>
                     <p class="text-muted mb-0">
-                        <?= date('F d, Y', strtotime($booking['start_time'])) ?> ·
+                        <?= date('F d, Y \a\t h:i A', strtotime($booking['start_time'])) ?> ·
                         <span class="badge bg-success"><?= ucfirst($booking['status']) ?></span>
                     </p>
                     <div class="mt-3">
@@ -43,9 +43,7 @@
             <h5 class="fw-bold mb-3">Your Voucher</h5>
             <div id="qrcode" class="d-inline-block mb-3" style="margin: auto;"></div>
             <p class="text-muted small">Show this QR code to your guide</p>
-            <p class="fw-bold mb-0">Booking ID:
-                <?= $booking['booking_id'] ?>
-            </p>
+            <p class="fw-bold mb-0">Booking ID: <?= $booking['booking_id'] ?></p>
         </div>
     </div>
 
@@ -54,22 +52,19 @@
             <h5 class="fw-bold mb-3">Trip Details</h5>
             <div class="row mb-3">
                 <div class="col-sm-6">
-                    <strong>Tour:</strong>
-                    <?= htmlspecialchars($tour['tour_name']) ?>
+                    <strong>Tour:</strong> <?= htmlspecialchars($tour['tour_name']) ?>
                 </div>
                 <div class="col-sm-6">
-                    <strong>Version:</strong>
-                    <?= htmlspecialchars($version['version_name']) ?>
+                    <strong>Version:</strong> <?= htmlspecialchars($version['version_name']) ?>
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col-sm-6">
-                    <strong>Start Date:</strong>
-                    <?= date('M d, Y', strtotime($booking['start_time'])) ?>
+                    <strong>Start Date & Time:</strong><br>
+                    <?= date('M d, Y \a\t h:i A', strtotime($booking['start_time'])) ?>
                 </div>
                 <div class="col-sm-6">
-                    <strong>Total Paid:</strong> $
-                    <?= number_format($booking['total_price'], 2) ?>
+                    <strong>Total Paid:</strong> $<?= number_format($booking['total_price'], 2) ?>
                 </div>
             </div>
             <div class="row mb-3">
@@ -79,8 +74,12 @@
                     <?= htmlspecialchars($location['country'] ?? '') ?>
                 </div>
                 <div class="col-sm-6">
-                    <strong>Carbon Offset:</strong> $
-                    <?= number_format($booking['carbon_offset'], 2) ?>
+                    <strong>Carbon Offset:</strong> $<?= number_format($booking['carbon_offset'], 2) ?>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-6">
+                    <strong>Travelers:</strong> <?= (int) ($booking['num_travelers'] ?? 1) ?>
                 </div>
             </div>
             <?php if (!empty($addons)): ?>
@@ -89,8 +88,7 @@
                     <ul class="list-unstyled mb-0">
                         <?php foreach ($addons as $addon): ?>
                             <li>
-                                <?= htmlspecialchars($addon['name']) ?> ($
-                                <?= number_format($addon['price'], 2) ?>)
+                                <?= htmlspecialchars($addon['name']) ?> ($<?= number_format($addon['price'], 2) ?>)
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -140,6 +138,7 @@
             <p>
                 <?= nl2br(htmlspecialchars($tour['description'] ?? 'No description available.')) ?>
             </p>
+
             <ul class="list-unstyled">
                 <li><strong>Type:</strong>
                     <?= ucfirst(str_replace('_', ' ', $tour['tour_type'] ?? 'N/A')) ?>
@@ -150,6 +149,7 @@
                 <li><strong>Local Hiring:</strong>
                     <?= $tour['local_hiring'] ? 'Yes' : 'No' ?>
                 </li>
+
             </ul>
             <?php if (!empty($tour['routes'])): ?>
                 <?php $routeList = json_decode($tour['routes'], true); ?>
@@ -164,8 +164,13 @@
                     </ol>
                 <?php endif; ?>
             <?php endif; ?>
+            <a href="<?= BASE_URL ?>traveler/briefing/<?= $tour['tour_id'] ?>"
+                class="btn btn-outline-success btn-sm rounded-pill">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Trip Briefing
+            </a>
         </div>
     </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>

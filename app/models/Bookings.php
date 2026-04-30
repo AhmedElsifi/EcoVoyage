@@ -45,9 +45,9 @@ class Bookings
 
         $stmt = $this->db->prepare(
             "INSERT INTO bookings 
-         (traveler_id, guide_id, tour_version_id, carbon_offset, start_time, status, selected_addons, total_price)
+         (traveler_id, guide_id, tour_version_id, carbon_offset, start_time, status, selected_addons, total_price, num_travelers)
          VALUES 
-         (:traveler_id, :guide_id, :tour_version_id, :carbon_offset, :start_time, :status, :selected_addons, :total_price)"
+         (:traveler_id, :guide_id, :tour_version_id, :carbon_offset, :start_time, :status, :selected_addons, :total_price, :num_travelers)"
         );
         $success = $stmt->execute([
             'traveler_id' => $data['traveler_id'],
@@ -55,9 +55,10 @@ class Bookings
             'tour_version_id' => $data['tour_version_id'],
             'carbon_offset' => $data['carbon_offset'] ?? 0,
             'start_time' => $data['start_time'],
-            'status' => $status,                     // dynamic
+            'status' => $status,                     
             'selected_addons' => $data['selected_addons'] ?? '[]',
-            'total_price' => $data['total_price'] ?? 0
+            'total_price' => $data['total_price'] ?? 0,
+            'num_travelers' => $data['num_travelers'] ?? 1
         ]);
         return $success ? $this->db->lastInsertId() : false;
     }

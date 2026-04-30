@@ -51,6 +51,17 @@
             <span class="text-muted"> / person</span>
         </div>
 
+        <div class="mb-3">
+            <span class="text-muted">Eco‑Leaf Rating</span>
+            <div class="mt-1">
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <i class="bi bi-tree-fill fs-5 <?= $i <= $ecoLeaves ? 'text-success' : 'text-muted' ?>"></i>
+                <?php endfor; ?>
+                <span class="ms-2 fw-bold text-success">
+                    <?= $ecoLeaves ?>/5
+                </span>
+            </div>
+        </div>
         <hr>
 
         <?php if (!empty($guide['bio'])): ?>
@@ -86,6 +97,7 @@
             <?php endif; ?>
         <?php endif; ?>
     </div>
+
     <div class="col-lg-4">
         <form id="bookingForm" method="GET" action="<?= BASE_URL ?>traveler/book">
             <input type="hidden" name="tour_id" value="<?= $tour['tour_id'] ?>">
@@ -96,20 +108,32 @@
                     <?php if (!empty($versions)): ?>
                         <div class="mb-3">
                             <label for="versionSelect" class="form-label fw-semibold">Choose Version</label>
-                            <select id="versionSelect" name="version_id" class="form-select" onchange="updatePrice()">
+                            <select id="versionSelect" name="version_id" class="form-select">
                                 <?php foreach ($versions as $ver): ?>
                                     <option value="<?= $ver['tour_version_id'] ?>" data-price="<?= $ver['price_per_person'] ?>"
-                                        data-capacity="<?= $ver['max_capacity'] ?>">
-                                        <?= htmlspecialchars($ver['version_name']) ?> -
+                                        data-capacity="<?= $ver['max_capacity'] ?>"
+                                        data-discounts='<?= htmlspecialchars($ver['group_discounts'] ?? '[]') ?>'>
+                                        <?= htmlspecialchars($ver['version_name']) ?> –
                                         $<?= number_format($ver['price_per_person']) ?>
                                         <?php if (!empty($ver['booking_type'])): ?>
-                                            (<?= $ver['booking_type'] === 'instant' ? 'Instant' : 'Request to Book' ?>)
+                                            (<?= $ver['booking_type'] === 'instant' ? 'Instant' : 'Request' ?>)
                                         <?php endif; ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                     <?php endif; ?>
+                    <div class="mb-3">
+                        <label for="numTravelers" class="form-label fw-semibold">Travelers</label>
+                        <input type="number" id="numTravelers" name="num_travelers" class="form-control" value="1"
+                            min="1" max="<?= $versions[0]['max_capacity'] ?? 20 ?>"
+                            data-max-capacity="<?= $versions[0]['max_capacity'] ?? 20 ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="startDateTime" class="form-label fw-semibold">Tour Date & Time</label>
+                        <input type="datetime-local" id="startDateTime" name="start_time" class="form-control" required
+                            min="<?= date('Y-m-d\TH:i', strtotime('+1 day')) ?>">
+                    </div>
                     <?php if (!empty($addons)): ?>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Extra Add‑ons</label>
@@ -119,7 +143,8 @@
                                         value="<?= $addon['addon_id'] ?>" data-price="<?= $addon['price'] ?>"
                                         id="addon_<?= $addon['addon_id'] ?>">
                                     <label class="form-check-label" for="addon_<?= $addon['addon_id'] ?>">
-                                        <?= htmlspecialchars($addon['name']) ?> (+$<?= number_format($addon['price']) ?>)
+                                        <?= htmlspecialchars($addon['name']) ?>
+                                        (+$<?= number_format($addon['price']) ?>)
                                     </label>
                                 </div>
                             <?php endforeach; ?>
@@ -130,18 +155,18 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold">🌱 Carbon Offset</label>
                             <div class="card bg-light border-0 p-3">
-                                <p class="mb-2 small">This tour emits approximately
-                                    <strong><?= number_format($footprintKg, 1) ?> kg CO₂</strong>.
+                                <p class="mb-2 small">This tour emits
+                                    <strong><?= number_format($footprintKg, 1) ?> kg CO₂</strong>/person.
                                 </p>
-                                <label for="offsetProject" class="form-label small fw-semibold">Choose a local offset
-                                    project</label>
+                                <label for="offsetProject" class="form-label small fw-semibold">Offset project</label>
                                 <select id="offsetProject" name="offset_project" class="form-select">
                                     <option value="">None (skip offset)</option>
                                     <?php foreach ($projects as $proj): ?>
-                                        <?php $projCost = $footprintKg * (float) $proj['cost_per_kg']; ?>
-                                        <option value="<?= $proj['project_id'] ?>" data-cost="<?= $projCost ?>"
+                                        <?php $costPerPerson = $footprintKg * (float) $proj['cost_per_kg']; ?>
+                                        <option value="<?= $proj['project_id'] ?>" data-cost="<?= $costPerPerson ?>"
                                             data-description="<?= htmlspecialchars($proj['description']) ?>">
-                                            <?= htmlspecialchars($proj['name']) ?> – $<?= number_format($projCost, 2) ?>
+                                            <?= htmlspecialchars($proj['name']) ?>
+                                            (+$<?= number_format($costPerPerson, 2) ?>/person)
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -151,9 +176,8 @@
                     <?php endif; ?>
 
                     <hr>
-                    <h5>Total: <span id="totalPrice"
-                            class="text-success fw-bold">$<?= number_format($tour['min_price'] ?? 0) ?></span></h5>
-                    <small class="text-muted">All taxes & fees included.</small>
+                    <h5>Total: <span id="totalPrice" class="text-success fw-bold">$0.00</span></h5>
+                    <small class="text-muted">Includes group discount & taxes.</small>
 
                     <button type="submit" class="btn btn-success w-100 rounded-pill btn-lg mt-3 mb-2">
                         <i class="bi bi-calendar-check me-2"></i> Book Now
@@ -177,12 +201,11 @@
                 <h6 class="fw-bold mb-1">
                     <?= htmlspecialchars($tour['guide_name']) ?>
                 </h6>
-                <p class="text-muted mb-2"><i class="bi bi-geo-alt-fill text-success me-1"></i>
+                <p class="text-muted mb-2">
+                    <i class="bi bi-geo-alt-fill text-success me-1"></i>
                     <?= htmlspecialchars($guide['country_of_residence'] ?? '') ?>
                 </p>
-                <p>
-                    <?= htmlspecialchars($guide['bio'] ?? '') ?>
-                </p>
+                <p><?= htmlspecialchars($guide['bio'] ?? '') ?></p>
                 <div class="d-flex gap-3 text-muted">
                     <span><i class="bi bi-briefcase me-1"></i>
                         <?= $guide['years_of_experience'] ?? '?' ?> years exp.
@@ -203,19 +226,13 @@
             <div class="card border-0 shadow-sm rounded-4 mt-4 p-4">
                 <h5 class="fw-bold mb-3">
                     <?= htmlspecialchars($ver['version_name']) ?> Itinerary
-                    <span class="badge bg-success ms-2">$
-                        <?= number_format($ver['price_per_person']) ?>
-                    </span>
+                    <span class="badge bg-success ms-2">$<?= number_format($ver['price_per_person']) ?></span>
                 </h5>
                 <div class="row">
                     <?php foreach ($itinerary as $day => $desc): ?>
                         <div class="col-md-6 mb-3">
-                            <strong class="text-success">
-                                <?= ucfirst($day) ?>
-                            </strong><br>
-                            <span class="text-muted">
-                                <?= htmlspecialchars($desc) ?>
-                            </span>
+                            <strong class="text-success"><?= ucfirst($day) ?></strong><br>
+                            <span class="text-muted"><?= htmlspecialchars($desc) ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -231,9 +248,7 @@
             <h5 class="fw-bold mb-3"><i class="bi bi-sun text-warning me-2"></i>Best Time to Visit</h5>
             <ul class="list-unstyled mb-0">
                 <?php foreach ($seasons as $season => $period): ?>
-                    <li><strong>
-                            <?= ucfirst(str_replace('_', ' ', $season)) ?>:
-                        </strong>
+                    <li><strong><?= ucfirst(str_replace('_', ' ', $season)) ?>:</strong>
                         <?= htmlspecialchars($period) ?>
                     </li>
                 <?php endforeach; ?>
@@ -243,45 +258,78 @@
 <?php endif; ?>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        function updatePrice() {
-            let basePrice = 0;
-            const versionSelect = document.getElementById('versionSelect');
-            if (versionSelect && versionSelect.selectedOptions.length) {
-                basePrice = parseFloat(versionSelect.selectedOptions[0].dataset.price) || 0;
+    function parseDiscounts(discountsStr) {
+        try { return JSON.parse(discountsStr); } catch (e) { return []; }
+    }
+
+    function getGroupDiscountPercent(num, tiers) {
+        let best = 0;
+        tiers.forEach(tier => {
+            if (num >= tier.min_persons) {
+                best = Math.max(best, tier.discount_percent);
             }
-            document.querySelectorAll('.addon-check:checked').forEach(function (cb) {
-                basePrice += parseFloat(cb.dataset.price) || 0;
-            });
-            const offsetSelect = document.getElementById('offsetProject');
-            if (offsetSelect && offsetSelect.selectedOptions.length && offsetSelect.value !== '') {
-                const costAttr = offsetSelect.selectedOptions[0].getAttribute('data-cost');
-                const cost = parseFloat(costAttr?.trim()) || 0;
-                basePrice += cost;
-            }
-            const totalEl = document.getElementById('totalPrice');
-            if (totalEl) {
-                totalEl.textContent = '$' + basePrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-        }
-        const versionSelect = document.getElementById('versionSelect');
-        if (versionSelect) {
-            versionSelect.addEventListener('change', updatePrice);
-        }
-        document.querySelectorAll('.addon-check').forEach(function (cb) {
-            cb.addEventListener('change', updatePrice);
         });
-        const offsetSelect = document.getElementById('offsetProject');
-        if (offsetSelect) {
-            offsetSelect.addEventListener('change', function () {
-                updatePrice();
-                const selected = this.options[this.selectedIndex];
-                const descEl = document.getElementById('projectDesc');
-                if (descEl) {
-                    descEl.textContent = selected.getAttribute('data-description')?.trim() || '';
-                }
-            });
+        return best;
+    }
+
+    function updatePrice() {
+        const versionSelect = document.getElementById('versionSelect');
+        const travelersInput = document.getElementById('numTravelers');
+
+        if (!versionSelect || !travelersInput) return;
+
+        const selectedOption = versionSelect.selectedOptions[0];
+        if (!selectedOption) return;
+        const maxCapacity = parseInt(selectedOption.dataset.capacity) || 10;
+        travelersInput.max = maxCapacity;
+        let numTravelers = parseInt(travelersInput.value) || 1;
+        if (numTravelers > maxCapacity) {
+            numTravelers = maxCapacity;
+            travelersInput.value = maxCapacity;
         }
+
+        const basePerPerson = parseFloat(selectedOption.dataset.price) || 0;
+        const discountStr = selectedOption.dataset.discounts || '[]';
+        const discountTiers = parseDiscounts(discountStr);
+        const discountPercent = getGroupDiscountPercent(numTravelers, discountTiers);
+
+        let total = basePerPerson * numTravelers;
+        if (discountPercent > 0) {
+            total *= (1 - discountPercent / 100);
+        }
+
+        document.querySelectorAll('.addon-check:checked').forEach(cb => {
+            total += (parseFloat(cb.dataset.price) || 0) * numTravelers;
+        });
+
+        const offsetSelect = document.getElementById('offsetProject');
+        if (offsetSelect && offsetSelect.value) {
+            const costPerPerson = parseFloat(offsetSelect.selectedOptions[0]?.dataset.cost) || 0;
+            total += costPerPerson * numTravelers;
+        }
+
+        const taxPercent = <?= $taxPercent ?? 5 ?>;
+        const totalWithTax = total * (1 + taxPercent / 100);
+
+        document.getElementById('totalPrice').textContent =
+            '$' + totalWithTax.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const versionSelect = document.getElementById('versionSelect');
+        const travelersInput = document.getElementById('numTravelers');
+        const offsetSelect = document.getElementById('offsetProject');
+
+        versionSelect?.addEventListener('change', updatePrice);
+        travelersInput?.addEventListener('input', updatePrice);
+        document.querySelectorAll('.addon-check').forEach(cb => cb.addEventListener('change', updatePrice));
+
+        offsetSelect?.addEventListener('change', function () {
+            updatePrice();
+            const desc = this.options[this.selectedIndex]?.dataset.description || '';
+            document.getElementById('projectDesc').textContent = desc;
+        });
+
         updatePrice();
     });
 </script>

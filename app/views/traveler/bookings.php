@@ -16,6 +16,7 @@
                         <th>Tour</th>
                         <th>Location</th>
                         <th>Start Date</th>
+                        <th>Travelers</th>
                         <th>Total</th>
                         <th>Status</th>
                         <th></th>
@@ -24,25 +25,18 @@
                 <tbody>
                     <?php foreach ($bookings as $b): ?>
                         <tr>
-                            <td class="fw-bold">#
-                                <?= $b['booking_id'] ?>
-                            </td>
+                            <td class="fw-bold">#<?= $b['booking_id'] ?></td>
                             <td>
                                 <?= htmlspecialchars($b['tour_name']) ?>
-                                <br><small class="text-muted">
-                                    <?= htmlspecialchars($b['version_name']) ?>
-                                </small>
+                                <br><small class="text-muted"><?= htmlspecialchars($b['version_name']) ?></small>
                             </td>
                             <td>
                                 <?= htmlspecialchars($b['location_name'] ?? '') ?>,
                                 <?= htmlspecialchars($b['country'] ?? '') ?>
                             </td>
-                            <td>
-                                <?= date('M d, Y', strtotime($b['trip_date'] ?? $b['start_time'])) ?>
-                            </td>
-                            <td>$
-                                <?= number_format($b['total_price'], 2) ?>
-                            </td>
+                            <td><?= date('M d, Y', strtotime($b['trip_date'] ?? $b['start_time'])) ?></td>
+                            <td><?= (int) ($b['num_travelers'] ?? 1) ?></td>
+                            <td>$<?= number_format($b['total_price'], 2) ?></td>
                             <td>
                                 <?php
                                 $statusClass = match ($b['status']) {
@@ -54,9 +48,7 @@
                                     default => 'bg-light text-dark'
                                 };
                                 ?>
-                                <span class="badge <?= $statusClass ?>">
-                                    <?= ucfirst($b['status']) ?>
-                                </span>
+                                <span class="badge <?= $statusClass ?>"><?= ucfirst($b['status']) ?></span>
                             </td>
                             <td class="text-end">
                                 <a href="<?= BASE_URL ?>traveler/booking/<?= $b['booking_id'] ?>"

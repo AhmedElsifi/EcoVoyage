@@ -68,6 +68,7 @@ class TravelerController
         $guide = $this->guidesModel->getById($tour['guide_id']);
         $location = $this->locationsModel->getById($tour['location_id']);
         $projects = $this->offsetProjectsModel->getOffsetProjects();
+        $ecoLeaves = $this->toursModel->getEcoLeafRating($tour);
 
         $data = [
             'title' => $tour['tour_name'] . ' - EcoVoyage',
@@ -76,7 +77,8 @@ class TravelerController
             'addons' => $addons,
             'guide' => $guide,
             'location' => $location,
-            'projects' => $projects
+            'projects' => $projects,
+            'ecoLeaves' => $ecoLeaves
         ];
 
         View::load('traveler/tour_details', $data);
@@ -100,53 +102,56 @@ class TravelerController
         $offsetProject = $offsetProjId ? $this->offsetProjectsModel->getById($offsetProjId) : null;
         $settings = $this->platformsettingsModel->getSettings();
 
-        $basePrice = (float) $version['price_per_person'];
-        $addonTotal = array_sum(array_column($addons, 'price'));
-        $offsetCost = $offsetProject ? ($tour['carbon_footprint'] * $offsetProject['cost_per_kg']) : 0;
-        $subtotal = $basePrice + $addonTotal + $offsetCost;
-
+        $basePricePerPerson = (float) $version['price_per_person'];
         $taxPercent = (float) ($settings['local_tax_percent'] ?? 5);
         $platformFeePct = (float) ($settings['platform_fee_percent'] ?? 10);
         $currency = $settings['currency'] ?? 'USD';
 
-        $taxAmount = $subtotal * ($taxPercent / 100);
-        $totalTravelerPays = $subtotal + $taxAmount;
-
-        $platformFeeAmount = $subtotal * ($platformFeePct / 100);
-        $guideEarnings = $subtotal - $platformFeeAmount;
-
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $numTravelers = max(1, (int) ($_GET['num_travelers'] ?? 1));
+            $startDateTime = $_GET['start_time'] ?? null;
+
+            $discountTiers = json_decode($version['group_discounts'] ?? '[]', true);
+            $discountPercent = 0;
+            foreach ($discountTiers as $tier) {
+                if ($numTravelers >= $tier['min_persons']) {
+                    $discountPercent = max($discountPercent, $tier['discount_percent']);
+                }
+            }
+
+            $baseTotal = $basePricePerPerson * $numTravelers;
+            if ($discountPercent > 0) {
+                $baseTotal *= (1 - $discountPercent / 100);
+            }
+
+            $addonTotal = 0;
+            foreach ($addons as $addon) {
+                $addonTotal += $addon['price'] * $numTravelers;
+            }
+
+            $offsetCost = 0;
+            if ($offsetProject) {
+                $costPerPerson = $tour['carbon_footprint'] * $offsetProject['cost_per_kg'];
+                $offsetCost = $costPerPerson * $numTravelers;
+            }
+
+            $subtotal = $baseTotal + $addonTotal + $offsetCost;
+            $taxAmount = $subtotal * ($taxPercent / 100);
+            $totalTravelerPays = $subtotal + $taxAmount;
+            $platformFeeAmount = $subtotal * ($platformFeePct / 100);
+            $guideEarnings = $subtotal - $platformFeeAmount;
+
             View::load('traveler/book', [
                 'tour' => $tour,
                 'version' => $version,
                 'addons' => $addons,
                 'offsetProject' => $offsetProject,
-                'basePrice' => $basePrice,
-                'addonTotal' => $addonTotal,
-                'offsetCost' => $offsetCost,
-                'subtotal' => $subtotal,
-                'taxPercent' => $taxPercent,
-                'taxAmount' => $taxAmount,
-                'platformFeePct' => $platformFeePct,
-                'platformFeeAmount' => $platformFeeAmount,
-                'totalTravelerPays' => $totalTravelerPays,
-                'guideEarnings' => $guideEarnings,
-                'currency' => $currency
-            ]);
-            return;
-        }
-
-        $travelerId = $_SESSION['user_id'];
-        $startDate = $_POST['start_date'] ?? null;
-
-        if (!$startDate) {
-            $errors = ['Please select a start date.'];
-            View::load('traveler/book', [
-                'tour' => $tour,
-                'version' => $version,
-                'addons' => $addons,
-                'offsetProject' => $offsetProject,
-                'basePrice' => $basePrice,
+                'basePricePerPerson' => $basePricePerPerson,
+                'numTravelers' => $numTravelers,
+                'startDateTime' => $startDateTime,
+                'discountPercent' => $discountPercent,
+                'discountAmount' => $basePricePerPerson * $numTravelers * ($discountPercent / 100),
+                'baseTotal' => $baseTotal,
                 'addonTotal' => $addonTotal,
                 'offsetCost' => $offsetCost,
                 'subtotal' => $subtotal,
@@ -157,17 +162,110 @@ class TravelerController
                 'totalTravelerPays' => $totalTravelerPays,
                 'guideEarnings' => $guideEarnings,
                 'currency' => $currency,
+                'addonIds' => $addonIds,
+                'offsetProjId' => $offsetProjId,
+                'tourId' => $tourId,
+                'versionId' => $versionId,
+                'errors' => [],
+            ]);
+            return;
+        }
+
+        $travelerId = $_SESSION['user_id'];
+        $startDateTime = $_POST['start_time'] ?? null;
+        $numTravelers = max(1, (int) ($_POST['num_travelers'] ?? 1));
+
+        if ($numTravelers > $version['max_capacity']) {
+            $errors = ['The maximum group size for this version is ' . $version['max_capacity'] . ' persons.'];
+            View::load('traveler/book', [
+                'tour' => $tour,
+                'version' => $version,
+                'addons' => $addons,
+                'offsetProject' => $offsetProject,
+                'basePricePerPerson' => $basePricePerPerson,
+                'numTravelers' => $numTravelers,
+                'startDateTime' => $startDateTime,
+                'discountPercent' => $discountPercent ?? 0,
+                'discountAmount' => ($basePricePerPerson * $numTravelers * (($discountPercent ?? 0) / 100)),
+                'baseTotal' => $basePricePerPerson * $numTravelers * (1 - ($discountPercent ?? 0) / 100),
+                'addonTotal' => array_sum(array_column($addons, 'price')) * $numTravelers,
+                'offsetCost' => $offsetProject ? ($tour['carbon_footprint'] * $offsetProject['cost_per_kg'] * $numTravelers) : 0,
+                'subtotal' => 0,
+                'taxPercent' => $taxPercent,
+                'taxAmount' => 0,
+                'platformFeePct' => $platformFeePct,
+                'platformFeeAmount' => 0,
+                'totalTravelerPays' => 0,
+                'guideEarnings' => 0,
+                'currency' => $currency,
+                'errors' => $errors,
+                'addonIds' => $addonIds,
+                'offsetProjId' => $offsetProjId,
+                'tourId' => $tourId,
+                'versionId' => $versionId,
+            ]);
+            return;
+        }
+
+        if (!$startDateTime) {
+            $errors = ['Please select a tour date and time.'];
+            View::load('traveler/book', [
+                'tour' => $tour,
+                'version' => $version,
+                'addons' => $addons,
+                'offsetProject' => $offsetProject,
+                'basePricePerPerson' => $basePricePerPerson,
+                'addonTotal' => array_sum(array_column($addons, 'price')),
+                'offsetCost' => $offsetProject ? ($tour['carbon_footprint'] * $offsetProject['cost_per_kg']) : 0,
+                'subtotal' => 0,
+                'taxPercent' => $taxPercent,
+                'taxAmount' => 0,
+                'platformFeePct' => $platformFeePct,
+                'platformFeeAmount' => 0,
+                'totalTravelerPays' => 0,
+                'guideEarnings' => 0,
+                'currency' => $currency,
                 'errors' => $errors
             ]);
             return;
         }
 
+        $dateOnly = date('Y-m-d', strtotime($startDateTime));
         $guideId = $tour['guide_id'];
-        if (!$this->bookingsModel->isGuideAvailable($guideId, $startDate)) {
+        if (!$this->bookingsModel->isGuideAvailable($guideId, $dateOnly)) {
             header('Location: ' . BASE_URL . 'traveler/error?message=' . urlencode('The guide is not available on this date. Please choose a different date.'));
             exit;
         }
 
+        $discountTiers = json_decode($version['group_discounts'] ?? '[]', true);
+        $discountPercent = 0;
+        foreach ($discountTiers as $tier) {
+            if ($numTravelers >= $tier['min_persons']) {
+                $discountPercent = max($discountPercent, $tier['discount_percent']);
+            }
+        }
+
+        $baseTotal = $basePricePerPerson * $numTravelers;
+        if ($discountPercent > 0) {
+            $baseTotal *= (1 - $discountPercent / 100);
+        }
+
+        $addonTotal = 0;
+        foreach ($addons as $addon) {
+            $addonTotal += $addon['price'] * $numTravelers;
+        }
+
+        $offsetCost = 0;
+        if ($offsetProject) {
+            $costPerPerson = $tour['carbon_footprint'] * $offsetProject['cost_per_kg'];
+            $offsetCost = $costPerPerson * $numTravelers;
+        }
+
+        $subtotal = $baseTotal + $addonTotal + $offsetCost;
+        $taxAmount = $subtotal * ($taxPercent / 100);
+        $totalTravelerPays = $subtotal + $taxAmount;
+        $platformFeeAmount = $subtotal * ($platformFeePct / 100);
+        $guideEarnings = $subtotal - $platformFeeAmount;
 
         $bookingType = $version['booking_type'] ?? 'instant';
 
@@ -177,10 +275,11 @@ class TravelerController
                 'guide_id' => $guideId,
                 'tour_version_id' => $versionId,
                 'carbon_offset' => $offsetCost,
-                'start_time' => $startDate,
+                'start_time' => $startDateTime,
                 'status' => 'pending',
                 'selected_addons' => json_encode(array_column($addons, 'addon_id')),
                 'total_price' => $totalTravelerPays,
+                'num_travelers' => $numTravelers,
             ]);
 
             if ($bookingId) {
@@ -193,7 +292,7 @@ class TravelerController
                     'version' => $version,
                     'addons' => $addons,
                     'offsetProject' => $offsetProject,
-                    'basePrice' => $basePrice,
+                    'basePricePerPerson' => $basePricePerPerson,
                     'addonTotal' => $addonTotal,
                     'offsetCost' => $offsetCost,
                     'subtotal' => $subtotal,
@@ -214,7 +313,7 @@ class TravelerController
                 'version' => $version,
                 'addons' => $addons,
                 'offsetProject' => $offsetProject,
-                'basePrice' => $basePrice,
+                'basePricePerPerson' => $basePricePerPerson,
                 'addonTotal' => $addonTotal,
                 'offsetCost' => $offsetCost,
                 'subtotal' => $subtotal,
@@ -225,11 +324,12 @@ class TravelerController
                 'totalTravelerPays' => $totalTravelerPays,
                 'guideEarnings' => $guideEarnings,
                 'currency' => $currency,
-                'startDate' => $startDate,
+                'startDate' => $startDateTime,
                 'tourId' => $tourId,
                 'versionId' => $versionId,
                 'addonIds' => $addonIds,
                 'offsetProjId' => $offsetProjId,
+                'numTravelers' => $numTravelers,
             ]);
             return;
         }
@@ -560,5 +660,33 @@ class TravelerController
         }
 
         View::load('traveler/settings', $data);
+    }
+
+    public function briefing($tourId)
+    {
+        $tour = $this->toursModel->getById($tourId);
+        if (!$tour) {
+            header('Location: ' . BASE_URL . 'traveler/dashboard');
+            exit;
+        }
+
+        $tourType = $tour['tour_type'];
+        $briefingModel = new Briefing();
+        $briefing = $briefingModel->getByTourType($tourType);
+
+        if (!$briefing) {
+            $briefing = [
+                'safety_text' => 'Follow general safety guidelines.',
+                'environmental_text' => 'Respect local ecosystems.',
+                'equipment_text' => 'Carry essential gear.',
+                'emergency_contact' => 'Call 911 in case of emergency.'
+            ];
+        }
+
+        View::load('traveler/briefing', [
+            'title' => 'Trip Briefing – ' . $tour['tour_name'],
+            'tour' => $tour,
+            'briefing' => $briefing
+        ]);
     }
 }

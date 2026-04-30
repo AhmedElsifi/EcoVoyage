@@ -108,6 +108,26 @@ class Tours
         ];
     }
 
+    public function getEcoLeafRating($tour)
+    {
+        $leaves = 0;
+        $footprint = (float) ($tour['carbon_footprint'] ?? 0);
+        if ($footprint <= 50) {
+            $leaves += 3;
+        } elseif ($footprint <= 150) {
+            $leaves += 2;
+        } elseif ($footprint <= 300) {
+            $leaves += 1;
+        }
+        if (!empty($tour['waste_management'])) {
+            $leaves += 1;
+        }
+        if (!empty($tour['local_hiring'])) {
+            $leaves += 1;
+        }
+        $leaves = max(2, $leaves);
+        return min(5, $leaves);
+    }
 
 }
 

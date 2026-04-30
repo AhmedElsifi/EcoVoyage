@@ -5,9 +5,7 @@
 </a>
 
 <div class="row g-5">
-
     <div class="col-lg-8">
-
         <?php
         $imgSrc = $tour['tour_img_path'] ?? null;
         $imgUrl = $imgSrc ? BASE_URL . ltrim($imgSrc, '/') : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&h=500&fit=crop';
@@ -51,6 +49,15 @@
                 <?= number_format($tour['min_price'] ?? 0) ?>
             </h3>
             <span class="text-muted"> / person</span>
+        </div>
+        <div class="mb-3">
+            <span class="text-muted">Eco‑Leaf Rating</span>
+            <div class="mt-1">
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <i class="bi bi-tree-fill fs-5 <?= $i <= ($ecoLeaves ?? 1) ? 'text-success' : 'text-muted' ?>"></i>
+                <?php endfor; ?>
+                <span class="ms-2 fw-bold text-success"><?= $ecoLeaves ?? 1 ?>/5</span>
+            </div>
         </div>
 
         <hr>

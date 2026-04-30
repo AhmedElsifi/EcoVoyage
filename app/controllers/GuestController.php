@@ -70,13 +70,16 @@ class GuestController
 
         $location = $locationsModel->getById($tour['location_id']);
 
+        $ecoLeaves = $this->toursModel->getEcoLeafRating($tour);
+
         $data = [
             'title' => $tour['tour_name'] . ' - EcoVoyage',
             'tour' => $tour,
             'versions' => $versions,
             'addons' => $addons,
             'guide' => $guide,
-            'location' => $location
+            'location' => $location,
+            'ecoLeaves' => $ecoLeaves
         ];
 
         View::load("guest/tour_details", $data);
