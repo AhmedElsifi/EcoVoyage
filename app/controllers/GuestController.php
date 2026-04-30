@@ -72,6 +72,8 @@ class GuestController
 
         $ecoLeaves = $this->toursModel->getEcoLeafRating($tour);
 
+        $localCredScore = $this->guidesModel->getLocalCredScore($tour['guide_id'], $tour['country']);
+        
         $data = [
             'title' => $tour['tour_name'] . ' - EcoVoyage',
             'tour' => $tour,
@@ -79,7 +81,8 @@ class GuestController
             'addons' => $addons,
             'guide' => $guide,
             'location' => $location,
-            'ecoLeaves' => $ecoLeaves
+            'ecoLeaves' => $ecoLeaves,
+            'localCredScore' => $localCredScore
         ];
 
         View::load("guest/tour_details", $data);

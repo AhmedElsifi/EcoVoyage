@@ -31,6 +31,11 @@
                 <input type="hidden" name="offset_project" value="<?= $offsetProjId ?? '' ?>">
                 <input type="hidden" name="start_date" value="<?= $startDate ?>">
                 <input type="hidden" name="total_price" value="<?= $totalTravelerPays ?>">
+                <input type="hidden" name="subtotal" value="<?= $subtotal ?>">
+                <input type="hidden" name="tax_amount" value="<?= $taxAmount ?>">
+                <input type="hidden" name="platform_fee_amount" value="<?= $platformFeeAmount ?>">
+                <input type="hidden" name="guide_earnings" value="<?= $guideEarnings ?>">
+                <input type="hidden" name="num_travelers" value="<?= $numTravelers ?? 1 ?>">
                 <div class="mb-3">
                     <label for="card_number" class="form-label fw-semibold">Card Number</label>
                     <input type="text" name="card_number" id="card_number" class="form-control"

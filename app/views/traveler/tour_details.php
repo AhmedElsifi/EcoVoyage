@@ -214,6 +214,17 @@
                         <?= $guide['sustainability_score'] ?? '—' ?>% eco score
                     </span>
                 </div>
+                <div class="mt-2">
+                    <i class="bi bi-pin-map-fill text-success me-1"></i>
+                    <strong>Local Cred:</strong>
+                    <div class="progress mt-1" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $localCredScore ?>%;"
+                            aria-valuenow="<?= $localCredScore ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted">
+                        <?= $localCredScore ?>/100
+                    </small>
+                </div>
             </div>
         </div>
     </div>
