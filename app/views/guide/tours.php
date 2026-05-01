@@ -21,6 +21,7 @@
                         <th>Location</th>
                         <th>Type</th>
                         <th>Status</th>
+                        <th>Eco‑Leaf</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -44,6 +45,12 @@
                                 };
                                 ?>
                                 <span class="badge <?= $statusClass ?>"><?= ucfirst($t['status']) ?></span>
+                            </td>
+                            <td>
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                    <i
+                                        class="bi bi-tree-fill small <?= $i <= ($t['eco_leaves'] ?? 1) ? 'text-success' : 'text-muted' ?>"></i>
+                                <?php endfor; ?>
                             </td>
                             <td class="text-end">
                                 <a href="<?= BASE_URL ?>guide/editTour/<?= $t['tour_id'] ?>"

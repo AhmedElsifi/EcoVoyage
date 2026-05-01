@@ -230,5 +230,17 @@ class Tours
         $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE tour_id = :id");
         return $stmt->execute(['id' => $tourId]);
     }
+
+    public function updateConsent($tourId, $docId, $verified = 0)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE {$this->table} SET consent_doc_id = :doc_id, consent_verified = :verified WHERE tour_id = :id"
+        );
+        return $stmt->execute([
+            'doc_id' => $docId,
+            'verified' => $verified,
+            'id' => $tourId
+        ]);
+    }
 }
 

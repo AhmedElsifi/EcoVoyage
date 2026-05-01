@@ -6,7 +6,6 @@
 
 <form method="POST" action="" enctype="multipart/form-data" id="tourForm">
     <div class="row g-4">
-        <!-- ========== MAIN TOUR FIELDS ========== -->
         <div class="col-md-8">
             <div class="card border-0 shadow-sm rounded-4 p-4">
                 <h5 class="fw-bold mb-3">Basic Information</h5>
@@ -38,13 +37,13 @@
                         <select name="tour_type" class="form-select">
                             <?php foreach ((new Tours())->getTourTypes() as $val => $label): ?>
                                 <option value="<?= $val ?>" <?= ($tour['tour_type'] ?? '') == $val ? 'selected' : '' ?>>
-                                    <?= $label ?></option>
+                                    <?= $label ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
 
-                <!-- Image upload -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tour Image</label>
                     <?php if (!empty($tour['tour_img_path'])): ?>
@@ -56,6 +55,29 @@
                     <input type="file" name="tour_image" class="form-control" accept="image/*">
                     <small class="text-muted">Upload a new image (JPEG/PNG, max 2MB). Leave empty to keep the current
                         one.</small>
+                </div>
+
+                <div class="mb-3 border-top pt-3 mt-3">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="indigenous_consent"
+                            id="indigenous_consent" <?= !empty($tour['consent_doc_id']) ? 'checked' : '' ?>>
+                        <label class="form-check-label fw-semibold" for="indigenous_consent">
+                            This tour takes place on protected / indigenous land
+                        </label>
+                    </div>
+                    <div id="consentFileSection" style="<?= !empty($tour['consent_doc_id']) ? '' : 'display:none;' ?>">
+                        <label class="form-label fw-semibold">Consent Document</label>
+                        <?php if (!empty($tour['consent_doc_path'])): ?>
+                            <div class="mb-2">
+                                <a href="<?= BASE_URL . ltrim($tour['consent_doc_path'], '/') ?>" target="_blank">
+                                    View current consent document
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="consent_document" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        <small class="text-muted">Upload a letter or agreement from the indigenous community / land
+                            authority (PDF, JPG, PNG).</small>
+                    </div>
                 </div>
 
                 <div class="row">
@@ -101,7 +123,6 @@
                     </div>
                 </div>
 
-                <!-- Routes -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Route / Stops</label>
                     <textarea name="routes_text" class="form-control" rows="3"
@@ -122,7 +143,6 @@
             </div>
         </div>
 
-        <!-- ========== FIRST VERSION (only on create) ========== -->
         <?php if (!isset($tour['tour_id'])): ?>
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm rounded-4 p-4">
@@ -164,7 +184,6 @@
             </div>
         <?php endif; ?>
 
-        <!-- ========== VERSIONS MANAGEMENT (edit only) ========== -->
         <?php if (isset($tour['tour_id'])): ?>
             <div class="col-12 mt-4">
                 <div class="card border-0 shadow-sm rounded-4 p-4">
@@ -222,7 +241,6 @@
                                     <label class="form-label small">Group Discounts</label>
                                     <div class="d-flex flex-column existing-discount-container"
                                         data-version-id="<?= $ver['tour_version_id'] ?>">
-                                        <!-- Discount rows added by JS -->
                                     </div>
                                     <button type="button" class="btn btn-outline-success btn-sm mt-1"
                                         onclick="addDiscountRowExisting(this, '<?= $ver['tour_version_id'] ?>')">+ Add
@@ -234,7 +252,6 @@
                         </div>
                     <?php endforeach; ?>
 
-                    <!-- Add new version -->
                     <hr>
                     <h6 class="fw-bold mb-3 mt-3">Add New Version</h6>
                     <div id="newVersionsContainer"></div>
@@ -245,7 +262,6 @@
             </div>
         <?php endif; ?>
 
-        <!-- Errors -->
         <?php if (!empty($errors)): ?>
             <div class="col-12">
                 <div class="alert alert-danger">
@@ -256,7 +272,6 @@
             </div>
         <?php endif; ?>
 
-        <!-- Submit -->
         <div class="col-12">
             <button type="submit" class="btn btn-success rounded-pill btn-lg">
                 <?= isset($tour['tour_id']) ? 'Update Tour' : 'Create Tour' ?>
@@ -266,9 +281,7 @@
     </div>
 </form>
 
-<!-- ========== SCRIPTS ========== -->
 <script>
-    // ----- For existing versions: Add discount row -----
     function addDiscountRowExisting(btn, versionId) {
         const container = btn.parentElement.querySelector('.existing-discount-container');
         const row = document.createElement('div');
@@ -283,7 +296,6 @@
         container.appendChild(row);
     }
 
-    // Pre-fill discount rows for existing versions
     document.querySelectorAll('.existing-discounts-data').forEach(function (hidden) {
         const container = hidden.parentElement.querySelector('.existing-discount-container');
         if (!container) return;
@@ -303,7 +315,6 @@
         });
     });
 
-    // ----- For new versions (in edit) -----
     function addNewVersionRow() {
         const container = document.getElementById('newVersionsContainer');
         const div = document.createElement('div');
@@ -360,7 +371,6 @@
         container.appendChild(row);
     }
 
-    // ----- For first version on create page -----
     function addDiscountRowNew2() {
         const container = document.getElementById('discountTiers');
         const row = document.createElement('div');
@@ -375,7 +385,6 @@
         container.appendChild(row);
     }
 
-    // ----- Version deletion warning -----
     document.getElementById('tourForm').addEventListener('submit', function (e) {
         const deleteCheckboxes = document.querySelectorAll('.delete-version:checked');
         if (deleteCheckboxes.length > 0) {
@@ -387,6 +396,15 @@
             if (!confirmed) {
                 e.preventDefault();
             }
+        }
+    });
+
+    document.getElementById('indigenous_consent')?.addEventListener('change', function () {
+        const fileSection = document.getElementById('consentFileSection');
+        if (this.checked) {
+            fileSection.style.display = 'block';
+        } else {
+            fileSection.style.display = 'none';
         }
     });
 </script>

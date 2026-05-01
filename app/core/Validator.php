@@ -69,4 +69,44 @@ class Validator
     {
         return $value === '' || strtotime($value) !== false;
     }
+
+    public static function positiveNumber($value)
+    {
+        return self::numeric($value) && (float) $value > 0;
+    }
+
+    public static function integer($value)
+    {
+        if (is_int($value))
+            return true;
+        if (is_string($value) && ctype_digit($value))
+            return true;
+        return false;
+    }
+
+    public static function minValue($value, $min, $inclusive = true)
+    {
+        if (!self::numeric($value))
+            return false;
+        $val = (float) $value;
+        return $inclusive ? $val >= $min : $val > $min;
+    }
+
+    public static function maxValue($value, $max, $inclusive = true)
+    {
+        if (!self::numeric($value))
+            return false;
+        $val = (float) $value;
+        return $inclusive ? $val <= $max : $val < $max;
+    }
+
+    public static function regex($value, $pattern)
+    {
+        return preg_match($pattern, (string) $value) === 1;
+    }
+
+    public static function inArray($value, array $array)
+    {
+        return in_array($value, $array, true);
+    }
 }

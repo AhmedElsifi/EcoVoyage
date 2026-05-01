@@ -62,5 +62,44 @@ class Guides
         return $stmt->execute(['amount' => $amount, 'gid' => $guideId]);
     }
 
+    public function updateBalances($guideId, $availableDelta, $pendingDelta, $withdrawnDelta)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE guides 
+         SET available_balance = available_balance + :avail,
+             pending_balance = pending_balance + :pend,
+             withdrawn_balance = withdrawn_balance + :withd
+         WHERE guide_id = :id"
+        );
+        return $stmt->execute([
+            'avail' => $availableDelta,
+            'pend' => $pendingDelta,
+            'withd' => $withdrawnDelta,
+            'id' => $guideId
+        ]);
+    }
+
+    public function updateProfile($guideId, $data)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE guides 
+         SET country_of_residence = :country,
+             bio = :bio,
+             years_of_experience = :experience
+         WHERE guide_id = :id"
+        );
+        return $stmt->execute([
+            'country' => $data['country_of_residence'],
+            'bio' => $data['bio'],
+            'experience' => $data['years_of_experience'],
+            'id' => $guideId
+        ]);
+    }
+
+    public function updateStatus($guideId, $status)
+    {
+        $stmt = $this->db->prepare("UPDATE guides SET status = :status WHERE guide_id = :id");
+        return $stmt->execute(['status' => $status, 'id' => $guideId]);
+    }
 }
 
