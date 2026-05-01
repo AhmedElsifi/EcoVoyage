@@ -142,5 +142,32 @@ class Bookings
         $stmt->execute(['gid' => $guideId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    public function getAllByGuide($guideId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT b.*, tours.tour_name, tv.version_name, 
+                u.name AS traveler_name, u.email AS traveler_email,
+                l.location_name, l.country
+         FROM {$this->table} b
+         JOIN tour_versions tv ON b.tour_version_id = tv.tour_version_id
+         JOIN tours ON tv.tour_id = tours.tour_id
+         JOIN locations l ON tours.location_id = l.location_id
+         JOIN users u ON b.traveler_id = u.user_id
+         WHERE b.guide_id = :gid
+         ORDER BY b.start_time ASC"
+        );
+        $stmt->execute(['gid' => $guideId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatus($bookingId, $status)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE {$this->table} SET status = :status 
+         WHERE booking_id = :id"
+        );
+        return $stmt->execute(['status' => $status, 'id' => $bookingId]);
+    }
 }
 

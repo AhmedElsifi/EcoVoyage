@@ -125,6 +125,7 @@
                             </li>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guide/tours">My Tours</a></li>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guide/bookings">Bookings</a></li>
+                            <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>guide/schedule">Schedule</a></li>
 
                         <?php elseif ($_SESSION['role'] == 'auditor'): ?>
                             <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>auditor/dashboard">Audit Panel</a>

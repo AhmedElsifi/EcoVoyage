@@ -153,5 +153,82 @@ class Tours
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getByGuide($guideId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT t.*, l.location_name, l.country
+         FROM {$this->table} t
+         JOIN locations l ON t.location_id = l.location_id
+         WHERE t.guide_id = :gid
+         ORDER BY t.tour_id DESC"
+        );
+        $stmt->execute(['gid' => $guideId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function create($data)
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO {$this->table} 
+         (tour_name, description, guide_id, location_id, tour_type, status, tour_img_path,
+          carbon_footprint, waste_management, local_hiring, impact_tags, routes)
+         VALUES 
+         (:name, :desc, :gid, :loc, :type, :status, :img, :cf, :wm, :lh, :tags, :routes)"
+        );
+        $stmt->execute([
+            'name' => $data['tour_name'],
+            'desc' => $data['description'] ?? null,
+            'gid' => $data['guide_id'],
+            'loc' => $data['location_id'],
+            'type' => $data['tour_type'],
+            'status' => $data['status'] ?? 'pending',
+            'img' => $data['tour_img_path'] ?? null,
+            'cf' => $data['carbon_footprint'] ?? 0,
+            'wm' => $data['waste_management'] ? 1 : 0,
+            'lh' => $data['local_hiring'] ? 1 : 0,
+            'tags' => $data['impact_tags'] ?? '',
+            'routes' => $data['routes'] ?? null
+        ]);
+        return $this->db->lastInsertId();
+    }
+
+    public function update($tourId, $data)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE {$this->table} 
+         SET tour_name = :name,
+             description = :desc,
+             location_id = :loc,
+             tour_type = :type,
+             status = 'pending',
+             tour_img_path = :img,
+             carbon_footprint = :cf,
+             waste_management = :wm,
+             local_hiring = :lh,
+             impact_tags = :tags,
+             routes = :routes
+         WHERE tour_id = :id"
+        );
+        return $stmt->execute([
+            'name' => $data['tour_name'],
+            'desc' => $data['description'] ?? null,
+            'loc' => $data['location_id'],
+            'type' => $data['tour_type'],
+            'img' => $data['tour_img_path'] ?? null,
+            'cf' => $data['carbon_footprint'] ?? 0,
+            'wm' => $data['waste_management'] ? 1 : 0,
+            'lh' => $data['local_hiring'] ? 1 : 0,
+            'tags' => $data['impact_tags'] ?? '',
+            'routes' => $data['routes'] ?? null,
+            'id' => $tourId
+        ]);
+    }
+
+    public function delete($tourId)
+    {
+        $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE tour_id = :id");
+        return $stmt->execute(['id' => $tourId]);
+    }
 }
 

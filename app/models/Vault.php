@@ -28,10 +28,29 @@ class Vault
 
     public function releaseFunds($bookingId)
     {
-        $stmt = $this->db->prepare(
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE booking_id = :id AND status = 'held'");
+        $stmt->execute(['id' => $bookingId]);
+        $vaultEntry = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$vaultEntry) {
+            return false;
+        }
+
+        $updateStmt = $this->db->prepare(
             "UPDATE {$this->table} SET status = 'released' WHERE booking_id = :id AND status = 'held'"
         );
-        $stmt->execute(['id' => $bookingId]);
+        $updateStmt->execute(['id' => $bookingId]);
+
+        $bookingStmt = $this->db->prepare("SELECT guide_id FROM bookings WHERE booking_id = :bid");
+        $bookingStmt->execute(['bid' => $bookingId]);
+        $guideId = $bookingStmt->fetchColumn();
+
+        if ($guideId) {
+            $guidesModel = new Guides();
+            $guidesModel->addToBalance($guideId, $vaultEntry['guide_earnings']);
+        }
+
+        return true;
     }
 
     public function refund($bookingId, $refundAmount)
