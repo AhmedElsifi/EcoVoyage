@@ -52,6 +52,18 @@
     </div>
 </div>
 
+
+<?php $badgeList = json_decode($guide['badges'] ?? '[]', true); ?>
+<?php if (!empty($badgeList)): ?>
+    <div class="mb-3">
+        <?php foreach ($badgeList as $badge): ?>
+            <span class="badge bg-success me-1">
+                <?= htmlspecialchars($badge) ?>
+            </span>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
 <h5 class="fw-bold mb-3">My Tours</h5>
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="table-responsive">

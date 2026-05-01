@@ -201,6 +201,16 @@
                 <h6 class="fw-bold mb-1">
                     <?= htmlspecialchars($tour['guide_name']) ?>
                 </h6>
+                <?php $guideBadges = json_decode($guide['badges'] ?? '[]', true); ?>
+                <?php if (!empty($guideBadges)): ?>
+                    <div class="mb-2">
+                        <?php foreach ($guideBadges as $badge): ?>
+                            <span class="badge bg-success bg-opacity-25 text-success me-1">
+                                <?= htmlspecialchars($badge) ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <p class="text-muted mb-2">
                     <i class="bi bi-geo-alt-fill text-success me-1"></i>
                     <?= htmlspecialchars($guide['country_of_residence'] ?? '') ?>
