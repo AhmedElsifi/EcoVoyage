@@ -19,8 +19,7 @@
                     <?= $currency ?>
                     <?= number_format($totalTravelerPays, 2) ?>
                 </strong></p>
-
-            <form method="POST" action="<?= BASE_URL ?>traveler/processPayment">
+            <form method="POST" action="<?= $paymentAction ?? BASE_URL . 'traveler/processPayment' ?>">
                 <input type="hidden" name="tour_id" value="<?= $tourId ?>">
                 <input type="hidden" name="version_id" value="<?= $versionId ?>">
                 <?php if (!empty($addonIds)): ?>

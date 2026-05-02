@@ -119,10 +119,20 @@ class GuideController
                 'decline' => 'declined',
                 'complete' => 'completed'
             };
+
+            if ($action === 'accept') {
+                $version = $this->tourVersionsModel->getTourVersionById($booking['tour_version_id']);
+                if ($version && ($version['booking_type'] ?? 'instant') === 'request') {
+                    $newStatus = 'payment_pending';
+                }
+            }
+
             $this->bookingsModel->updateStatus($bookingId, $newStatus);
 
             if ($newStatus === 'completed') {
                 $this->vaultModel->releaseFunds($bookingId);
+                $this->guidesModel->updateCancellationRate($booking['guide_id']);
+
             }
         }
 

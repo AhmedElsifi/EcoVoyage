@@ -29,6 +29,12 @@
                                 <i class="bi bi-x-circle me-1"></i> Cancel Booking
                             </a>
                         <?php endif; ?>
+                        <?php if ($booking['status'] === 'payment_pending'): ?>
+                            <a href="<?= BASE_URL ?>traveler/payBooking/<?= $booking['booking_id'] ?>"
+                                class="btn btn-success w-100 rounded-pill mb-2">
+                                <i class="bi bi-lock me-2"></i> Complete Payment
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div>

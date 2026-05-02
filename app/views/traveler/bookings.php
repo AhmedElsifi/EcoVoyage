@@ -42,6 +42,7 @@
                                 $statusClass = match ($b['status']) {
                                     'confirmed' => 'bg-success',
                                     'pending' => 'bg-warning text-dark',
+                                    'payment_pending' => 'bg-info text-dark',
                                     'cancelled' => 'bg-danger',
                                     'declined' => 'bg-secondary',
                                     'completed' => 'bg-info text-dark',

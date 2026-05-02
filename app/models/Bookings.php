@@ -16,15 +16,15 @@ class Bookings
             "SELECT {$this->table}.*, tours.tour_name, tour_versions.version_name, 
                 DATE({$this->table}.start_time) AS trip_date,
                 locations.location_name, locations.country
-         FROM {$this->table}
-         JOIN tour_versions ON {$this->table}.tour_version_id = tour_versions.tour_version_id
-         JOIN tours ON tour_versions.tour_id = tours.tour_id
-         JOIN locations ON tours.location_id = locations.location_id
-         WHERE {$this->table}.traveler_id = :tid 
-           AND {$this->table}.status = 'confirmed' 
-           AND {$this->table}.start_time >= NOW()
-         ORDER BY {$this->table}.start_time ASC
-         LIMIT :limit"
+                FROM {$this->table}
+                JOIN tour_versions ON {$this->table}.tour_version_id = tour_versions.tour_version_id
+                JOIN tours ON tour_versions.tour_id = tours.tour_id
+                JOIN locations ON tours.location_id = locations.location_id
+                WHERE {$this->table}.traveler_id = :tid AND {$this->table}.status IN ('confirmed','payment_pending')
+                AND {$this->table}.status = 'confirmed' 
+                AND {$this->table}.start_time >= NOW()
+                ORDER BY {$this->table}.start_time ASC
+                LIMIT :limit"
         );
         $stmt->bindValue(':tid', $travelerId, PDO::PARAM_INT);
         $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);

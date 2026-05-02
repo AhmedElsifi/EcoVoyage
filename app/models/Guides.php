@@ -155,5 +155,27 @@ class Guides
             'id' => $guideId
         ]);
     }
+
+    public function updateCancellationRate($guideId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM bookings 
+         WHERE guide_id = :gid AND status = 'cancelled'"
+        );
+        $stmt->execute(['gid' => $guideId]);
+        $cancelled = (int) $stmt->fetchColumn();
+
+        $stmt2 = $this->db->prepare(
+            "SELECT COUNT(*) FROM bookings 
+         WHERE guide_id = :gid AND status IN ('confirmed', 'completed', 'cancelled')"
+        );
+        $stmt2->execute(['gid' => $guideId]);
+        $total = (int) $stmt2->fetchColumn();
+
+        $rate = $total > 0 ? round(($cancelled / $total) * 100, 2) : 0.00;
+
+        $stmt3 = $this->db->prepare("UPDATE guides SET cancellation_rate = :rate WHERE guide_id = :id");
+        return $stmt3->execute(['rate' => $rate, 'id' => $guideId]);
+    }
 }
 

@@ -550,6 +550,130 @@ class TravelerController
         ]);
     }
 
+    public function payBooking($bookingId)
+    {
+        $booking = $this->bookingsModel->getById($bookingId);
+
+        if (!$booking || $booking['traveler_id'] != $_SESSION['user_id'] || $booking['status'] !== 'payment_pending') {
+            header('Location: ' . BASE_URL . 'traveler/dashboard');
+            exit;
+        }
+
+        $version = $this->tourVersionsModel->getTourVersionById($booking['tour_version_id']);
+        $tour = $this->toursModel->getById($version['tour_id']);
+        $addonIds = json_decode($booking['selected_addons'] ?? '[]', true);
+        $addons = !empty($addonIds) ? $this->addonsModel->getByIds($addonIds) : [];
+        $settings = $this->platformsettingsModel->getSettings();
+
+        $totalPrice = $booking['total_price'];
+        $taxPercent = (float) ($settings['local_tax_percent'] ?? 5);
+        $platformFeePct = (float) ($settings['platform_fee_percent'] ?? 10);
+        $currency = $settings['currency'] ?? 'USD';
+
+        $subtotal = $totalPrice / (1 + $taxPercent / 100);
+        $taxAmount = $totalPrice - $subtotal;
+        $platformFeeAmount = $subtotal * ($platformFeePct / 100);
+        $guideEarnings = $subtotal - $platformFeeAmount;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $cardNumber = preg_replace('/\s+/', '', $_POST['card_number'] ?? '');
+            $expiry = $_POST['expiry'] ?? '';
+            $cvv = $_POST['cvv'] ?? '';
+
+            $errors = [];
+
+            if (!preg_match('/^\d{16}$/', $cardNumber)) {
+                $errors[] = 'Card number must be exactly 16 digits.';
+            }
+
+            if (!preg_match('/^(0[1-9]|1[0-2])\/(\d{2})$/', $expiry, $matches)) {
+                $errors[] = 'Expiry must be in MM/YY format.';
+            } else {
+                $month = $matches[1];
+                $year = '20' . $matches[2];
+                $expiryDate = \DateTime::createFromFormat('Y-m-d', "$year-$month-01");
+                $expiryDate->modify('last day of this month');
+                $now = new \DateTime();
+                if ($expiryDate < $now) {
+                    $errors[] = 'Card has expired.';
+                }
+            }
+
+            if (!preg_match('/^\d{3,4}$/', $cvv)) {
+                $errors[] = 'CVV must be 3 or 4 digits.';
+            }
+
+            if (!empty($errors)) {
+                View::load('traveler/payment', [
+                    'tour' => $tour,
+                    'version' => $version,
+                    'addons' => $addons,
+                    'offsetProject' => null,
+                    'basePrice' => $version['price_per_person'],
+                    'addonTotal' => array_sum(array_column($addons, 'price')),
+                    'offsetCost' => 0,
+                    'subtotal' => $subtotal,
+                    'taxPercent' => $taxPercent,
+                    'taxAmount' => $taxAmount,
+                    'platformFeePct' => $platformFeePct,
+                    'platformFeeAmount' => $platformFeeAmount,
+                    'totalTravelerPays' => $totalPrice,
+                    'guideEarnings' => $guideEarnings,
+                    'currency' => $currency,
+                    'startDate' => $booking['start_time'],
+                    'tourId' => $tour['tour_id'],
+                    'versionId' => $version['tour_version_id'],
+                    'addonIds' => $addonIds,
+                    'offsetProjId' => null,
+                    'numTravelers' => $booking['num_travelers'],
+                    'errors' => $errors
+                ]);
+                return;
+            }
+
+            $this->bookingsModel->updateStatus($bookingId, 'confirmed');
+
+            $vaultModel = new Vault();
+            $vaultModel->create([
+                'booking_id' => $bookingId,
+                'total_amount' => $totalPrice,
+                'guide_earnings' => $guideEarnings,
+                'platform_fee' => $platformFeeAmount,
+                'tax_amount' => $taxAmount,
+                'status' => 'held'
+            ]);
+
+            header('Location: ' . BASE_URL . 'traveler/booking/' . $bookingId);
+            exit;
+        }
+
+        View::load('traveler/payment', [
+            'tour' => $tour,
+            'version' => $version,
+            'addons' => $addons,
+            'offsetProject' => null,
+            'basePrice' => $version['price_per_person'],
+            'addonTotal' => array_sum(array_column($addons, 'price')),
+            'offsetCost' => 0,
+            'subtotal' => $subtotal,
+            'taxPercent' => $taxPercent,
+            'taxAmount' => $taxAmount,
+            'platformFeePct' => $platformFeePct,
+            'platformFeeAmount' => $platformFeeAmount,
+            'totalTravelerPays' => $totalPrice,
+            'guideEarnings' => $guideEarnings,
+            'currency' => $currency,
+            'startDate' => $booking['start_time'],
+            'tourId' => $tour['tour_id'],
+            'versionId' => $version['tour_version_id'],
+            'addonIds' => $addonIds,
+            'offsetProjId' => null,
+            'numTravelers' => $booking['num_travelers'],
+            'errors' => [],
+            'paymentAction' => BASE_URL . 'traveler/payBooking/' . $bookingId,   
+        ]);
+    }
+
     public function error()
     {
         $message = $_GET['message'] ?? 'An error occurred.';
@@ -631,6 +755,7 @@ class TravelerController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->bookingsModel->cancel($bookingId);
+            $this->guidesModel->updateCancellationRate($booking['guide_id']);
 
             if ($isPaid) {
                 $vaultModel = new Vault();
