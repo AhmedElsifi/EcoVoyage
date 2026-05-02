@@ -209,7 +209,6 @@ class GuideController
                 }
             }
 
-            // Indigenous consent validation using Validator
             $consentChecked = isset($_POST['indigenous_consent']);
             $consentExt = null;
             if ($consentChecked) {
@@ -237,7 +236,6 @@ class GuideController
                 return;
             }
 
-            // ... routes, itinerary, discounts, tags (unchanged) ...
             $routesText = trim($_POST['routes_text'] ?? '');
             $routesArray = $routesText !== '' ? array_filter(array_map('trim', explode("\n", $routesText)), fn($s) => $s !== '') : [];
             $routesJson = !empty($routesArray) ? json_encode(array_values($routesArray)) : null;
@@ -271,14 +269,18 @@ class GuideController
             $impactTags = $_POST['impact_tags'] ?? [];
             $impactTags = is_array($impactTags) ? $impactTags : [];
             $autoTags = [];
-            if (!empty($_POST['waste_management']))
+            if (!empty($_POST['waste_management'])) {
                 $autoTags[] = 'zero_waste';
-            if (!empty($_POST['local_hiring']))
+            }
+            if (!empty($_POST['local_hiring'])) {
                 $autoTags[] = 'local_community';
-            if (isset($_POST['carbon_footprint']) && (float) $_POST['carbon_footprint'] <= 0)
+            }
+            if (isset($_POST['carbon_footprint']) && (float) $_POST['carbon_footprint'] <= 0) {
                 $autoTags[] = 'carbon_neutral';
-            if (($_POST['tour_type'] ?? '') === 'wildlife_safari')
+            }
+            if (($_POST['tour_type'] ?? '') === 'wildlife_safari') {
                 $autoTags[] = 'wildlife_protection';
+            }
 
             $allTags = array_unique(array_merge($impactTags, $autoTags));
             $allowedTags = ['carbon_neutral', 'plastic_free', 'local_community', 'wildlife_protection', 'renewable_energy', 'zero_waste', 'sustainable_food', 'ocean_conservation', 'reforestation', 'fair_wage'];
@@ -313,16 +315,16 @@ class GuideController
                 return;
             }
 
-            // Use the injected Documents model
             if ($consentChecked) {
                 $consentDir = $_SERVER['DOCUMENT_ROOT'] . '/EcoVoyage/public/uploads/consent/';
-                if (!is_dir($consentDir))
+                if (!is_dir($consentDir)) {
                     mkdir($consentDir, 0755, true);
+                }
                 $consentFilename = 'consent_' . $tourId . '_' . time() . '.' . $consentExt;
                 move_uploaded_file($_FILES['consent_document']['tmp_name'], $consentDir . $consentFilename);
                 $consentPath = '/uploads/consent/' . $consentFilename;
 
-                $consentDocId = $this->documentsModel->create([
+                $consentDocId = (new Documents())->create([
                     'entity_type' => 'tour',
                     'entity_id' => $tourId,
                     'doc_type' => 'indigenous_consent',
@@ -333,7 +335,7 @@ class GuideController
                 $this->toursModel->updateConsent($tourId, $consentDocId, 0);
             }
 
-            $versionData = [
+            $versionId = $this->tourVersionsModel->createVersion([
                 'tour_id' => $tourId,
                 'version_name' => $versionName,
                 'price_per_person' => (float) $price,
@@ -341,8 +343,23 @@ class GuideController
                 'itinerary_json' => $itineraryJson,
                 'booking_type' => $_POST['booking_type'] ?? 'instant',
                 'group_discounts' => $discountsJson,
-            ];
-            $this->tourVersionsModel->createVersion($versionData);
+            ]);
+
+            $newAddonNames = $_POST['addon_name']['new'] ?? [];
+            $newAddonPrices = $_POST['addon_price']['new'] ?? [];
+            foreach ($newAddonNames as $index => $name) {
+                $name = trim($name);
+                $price = $newAddonPrices[$index] ?? 0;
+                if ($name === '')
+                    continue;
+                if (!is_numeric($price) || $price < 0)
+                    $price = 0;
+                (new Addons())->create([
+                    'tour_version_id' => $versionId,
+                    'name' => $name,
+                    'price' => (float) $price
+                ]);
+            }
 
             header('Location: ' . BASE_URL . 'guide/tours');
             exit;
@@ -369,10 +386,9 @@ class GuideController
         $locations = $this->locationsModel->getAll();
         $versions = $this->tourVersionsModel->getByTourId($tourId);
 
-        // Consent document information
         $consentDoc = null;
         if (!empty($tour['consent_doc_id'])) {
-            $consentDoc = $this->documentsModel->getById($tour['consent_doc_id']);
+            $consentDoc = (new Documents())->getById($tour['consent_doc_id']);
             $tour['consent_doc_path'] = $consentDoc['file_path'] ?? null;
         }
 
@@ -401,15 +417,15 @@ class GuideController
                 }
             }
 
-            // Consent document validation using Validator
             $consentChecked = isset($_POST['indigenous_consent']);
             $newConsentUploaded = isset($_FILES['consent_document']) && $_FILES['consent_document']['error'] === UPLOAD_ERR_OK;
-
             if ($consentChecked) {
                 if ($newConsentUploaded) {
-                    if (!Validator::fileType('consent_document', ['pdf', 'jpg', 'jpeg', 'png'])) {
+                    $allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+                    $consentExt = strtolower(pathinfo($_FILES['consent_document']['name'], PATHINFO_EXTENSION));
+                    if (!in_array($consentExt, $allowed)) {
                         $errors[] = 'Consent document must be PDF, JPG, or PNG.';
-                    } elseif (!Validator::fileMaxSize('consent_document', 2048)) {
+                    } elseif ($_FILES['consent_document']['size'] > 2 * 1024 * 1024) {
                         $errors[] = 'Consent document must be under 2 MB.';
                     }
                 } elseif (empty($tour['consent_doc_id'])) {
@@ -428,22 +444,26 @@ class GuideController
                 return;
             }
 
-            // ... tags, routes, impact (unchanged) ...
             $routesText = trim($_POST['routes_text'] ?? '');
             $routesArray = $routesText !== '' ? array_filter(array_map('trim', explode("\n", $routesText)), fn($s) => $s !== '') : [];
             $routesJson = !empty($routesArray) ? json_encode(array_values($routesArray)) : null;
 
             $impactTags = $_POST['impact_tags'] ?? [];
             $impactTags = is_array($impactTags) ? $impactTags : [];
+
             $autoTags = [];
-            if (!empty($_POST['waste_management']))
+            if (!empty($_POST['waste_management'])) {
                 $autoTags[] = 'zero_waste';
-            if (!empty($_POST['local_hiring']))
+            }
+            if (!empty($_POST['local_hiring'])) {
                 $autoTags[] = 'local_community';
-            if (isset($_POST['carbon_footprint']) && (float) $_POST['carbon_footprint'] <= 0)
+            }
+            if (isset($_POST['carbon_footprint']) && (float) $_POST['carbon_footprint'] <= 0) {
                 $autoTags[] = 'carbon_neutral';
-            if (($_POST['tour_type'] ?? '') === 'wildlife_safari')
+            }
+            if (($_POST['tour_type'] ?? '') === 'wildlife_safari') {
                 $autoTags[] = 'wildlife_protection';
+            }
 
             $allTags = array_unique(array_merge($impactTags, $autoTags));
             $allowedTags = ['carbon_neutral', 'plastic_free', 'local_community', 'wildlife_protection', 'renewable_energy', 'zero_waste', 'sustainable_food', 'ocean_conservation', 'reforestation', 'fair_wage'];
@@ -464,18 +484,17 @@ class GuideController
             ];
             $this->toursModel->update($tourId, $updateData);
 
-            // Handle consent document update/removal using injected models
             if ($consentChecked) {
                 if ($newConsentUploaded) {
                     $consentDir = $_SERVER['DOCUMENT_ROOT'] . '/EcoVoyage/public/uploads/consent/';
                     if (!is_dir($consentDir))
                         mkdir($consentDir, 0755, true);
-                    $consentExt = strtolower(pathinfo($_FILES['consent_document']['name'], PATHINFO_EXTENSION));
                     $consentFilename = 'consent_' . $tourId . '_' . time() . '.' . $consentExt;
                     move_uploaded_file($_FILES['consent_document']['tmp_name'], $consentDir . $consentFilename);
                     $consentPath = '/uploads/consent/' . $consentFilename;
 
-                    $consentDocId = $this->documentsModel->create([
+                    $docModel = new Documents();
+                    $consentDocId = $docModel->create([
                         'entity_type' => 'tour',
                         'entity_id' => $tourId,
                         'doc_type' => 'indigenous_consent',
@@ -487,7 +506,7 @@ class GuideController
                 }
             } else {
                 if (!empty($tour['consent_doc_id'])) {
-                    $oldDoc = $this->documentsModel->getById($tour['consent_doc_id']);
+                    $oldDoc = (new Documents())->getById($tour['consent_doc_id']);
                     if ($oldDoc && !empty($oldDoc['file_path'])) {
                         $filePath = $_SERVER['DOCUMENT_ROOT'] . '/EcoVoyage/public' . $oldDoc['file_path'];
                         if (file_exists($filePath)) {
@@ -498,13 +517,13 @@ class GuideController
                 }
             }
 
-            // ... versions handling (unchanged except using $this->tourVersionsModel) ...
             $existingVersions = $_POST['versions'] ?? [];
             $deleteVersionIds = $_POST['delete_versions'] ?? [];
 
             foreach ($existingVersions as $versionId => $versionFields) {
-                if (in_array($versionId, $deleteVersionIds))
+                if (in_array($versionId, $deleteVersionIds)) {
                     continue;
+                }
                 if (empty($versionFields['version_name']) || empty($versionFields['price_per_person']) || empty($versionFields['max_capacity'])) {
                     $errors[] = "Version #$versionId: Name, price, and capacity are required.";
                     continue;
@@ -550,7 +569,6 @@ class GuideController
                 $this->tourVersionsModel->delete($delId);
             }
 
-            // ... new versions (same logic, using Validator) ...
             $newVersionNames = $_POST['new_version_name'] ?? [];
             $newPrices = $_POST['new_version_price'] ?? [];
             $newCapacities = $_POST['new_version_capacity'] ?? [];
@@ -608,6 +626,41 @@ class GuideController
                 ]);
             }
 
+            $addonNames = $_POST['addon_name'] ?? [];
+            $addonPrices = $_POST['addon_price'] ?? [];
+            $deleteAddonIds = $_POST['delete_addons'] ?? [];
+
+            foreach ($addonNames as $versionId => $names) {
+                foreach ($names as $index => $name) {
+                    $addonId = $_POST['addon_id'][$versionId][$index] ?? null;
+                    $price = $addonPrices[$versionId][$index] ?? 0;
+                    $name = trim($name);
+                    if ($name === '')
+                        continue;
+
+                    if ($addonId) {
+                        if (in_array($addonId, $deleteAddonIds)) {
+                            (new Addons())->delete($addonId);
+                        } else {
+                            (new Addons())->update($addonId, [
+                                'name' => $name,
+                                'price' => (float) $price
+                            ]);
+                        }
+                    } else {
+                        (new Addons())->create([
+                            'tour_version_id' => $versionId,
+                            'name' => $name,
+                            'price' => (float) $price
+                        ]);
+                    }
+                }
+            }
+
+            foreach ($deleteAddonIds as $delId) {
+                (new Addons())->delete($delId);
+            }
+
             if (!empty($errors)) {
                 View::load('guide/tour_form', [
                     'title' => 'Edit Tour – EcoVoyage',
@@ -623,7 +676,6 @@ class GuideController
             exit;
         }
 
-        // Prepare data for the form
         $routeList = json_decode($tour['routes'] ?? '[]', true);
         $tour['routes_text'] = is_array($routeList) ? implode("\n", $routeList) : '';
 
@@ -641,6 +693,7 @@ class GuideController
                 }
             }
             $ver['itinerary_text'] = implode("\n", $lines);
+            $ver['addons'] = (new Addons())->getByVersionId($ver['tour_version_id']);
         }
         unset($ver);
 

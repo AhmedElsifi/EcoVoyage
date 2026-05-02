@@ -180,6 +180,22 @@
                         </button>
                         <small class="text-muted d-block mt-1">Example: 4+ persons → 5% discount.</small>
                     </div>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#addons_new">
+                            <i class="bi bi-plus-circle"></i> Manage Add‑ons
+                        </button>
+                        <div class="collapse mt-2" id="addons_new">
+                            <div class="card card-body bg-white p-2">
+                                <div class="addon-rows-new">
+                                </div>
+                                <button type="button" class="btn btn-outline-success btn-sm mt-2"
+                                    onclick="addAddonRowNew()">
+                                    + Add Add‑on
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>
@@ -249,6 +265,38 @@
                             </div>
                             <input type="hidden" class="existing-discounts-data"
                                 value='<?= htmlspecialchars($ver['group_discounts'] ?? '[]') ?>'>
+
+                            <div class="mt-3">
+                                <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#addons_<?= $ver['tour_version_id'] ?>">
+                                    <i class="bi bi-plus-circle"></i> Manage Add‑ons
+                                </button>
+                                <div class="collapse mt-2" id="addons_<?= $ver['tour_version_id'] ?>">
+                                    <div class="card card-body bg-white p-2">
+                                        <div class="addon-rows" data-version="<?= $ver['tour_version_id'] ?>">
+                                            <?php foreach ($ver['addons'] as $addon): ?>
+                                                <div class="input-group input-group-sm mb-2 addon-row">
+                                                    <input type="hidden" name="addon_id[<?= $ver['tour_version_id'] ?>][]"
+                                                        value="<?= $addon['addon_id'] ?>">
+                                                    <input type="text" name="addon_name[<?= $ver['tour_version_id'] ?>][]"
+                                                        class="form-control" value="<?= htmlspecialchars($addon['name']) ?>"
+                                                        placeholder="Add-on name">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" step="0.01"
+                                                        name="addon_price[<?= $ver['tour_version_id'] ?>][]" class="form-control"
+                                                        value="<?= $addon['price'] ?>" placeholder="Price">
+                                                    <button type="button" class="btn btn-outline-danger"
+                                                        onclick="this.closest('.addon-row').remove()">×</button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-success btn-sm mt-2"
+                                            onclick="addAddonRow(this, '<?= $ver['tour_version_id'] ?>')">
+                                            + Add Add‑on
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
 
@@ -385,6 +433,20 @@
         container.appendChild(row);
     }
 
+    function addAddonRow(btn, versionId) {
+        const container = btn.parentElement.querySelector('.addon-rows');
+        const row = document.createElement('div');
+        row.className = 'input-group input-group-sm mb-2 addon-row';
+        row.innerHTML = `
+        <input type="hidden" name="addon_id[${versionId}][]" value="">
+        <input type="text" name="addon_name[${versionId}][]" class="form-control" placeholder="Add-on name">
+        <span class="input-group-text">$</span>
+        <input type="number" step="0.01" name="addon_price[${versionId}][]" class="form-control" placeholder="Price">
+        <button type="button" class="btn btn-outline-danger" onclick="this.closest('.addon-row').remove()">×</button>
+    `;
+        container.appendChild(row);
+    }
+
     document.getElementById('tourForm').addEventListener('submit', function (e) {
         const deleteCheckboxes = document.querySelectorAll('.delete-version:checked');
         if (deleteCheckboxes.length > 0) {
@@ -407,6 +469,19 @@
             fileSection.style.display = 'none';
         }
     });
+
+    function addAddonRowNew() {
+        const container = document.querySelector('.addon-rows-new');
+        const row = document.createElement('div');
+        row.className = 'input-group input-group-sm mb-2 addon-row-new';
+        row.innerHTML = `
+        <input type="text" name="addon_name[new][]" class="form-control" placeholder="Add-on name">
+        <span class="input-group-text">$</span>
+        <input type="number" step="0.01" name="addon_price[new][]" class="form-control" placeholder="Price">
+        <button type="button" class="btn btn-outline-danger" onclick="this.closest('.addon-row-new').remove()">×</button>
+    `;
+        container.appendChild(row);
+    }
 </script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

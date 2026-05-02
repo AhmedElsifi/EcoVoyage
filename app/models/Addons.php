@@ -30,5 +30,33 @@ class Addons
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function create($data)
+    {
+        $stmt = $this->db->prepare("INSERT INTO {$this->table} (tour_version_id, name, price) VALUES (:vid, :name, :price)");
+        return $stmt->execute([
+            'vid' => $data['tour_version_id'],
+            'name' => $data['name'],
+            'price' => $data['price']
+        ]);
+    }
+
+    public function update($addonId, $data)
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE {$this->table} SET name = :name, price = :price WHERE addon_id = :id"
+        );
+        return $stmt->execute([
+            'name' => $data['name'],
+            'price' => $data['price'],
+            'id' => $addonId
+        ]);
+    }
+
+    public function delete($addonId)
+    {
+        $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE addon_id = :id");
+        return $stmt->execute(['id' => $addonId]);
+    }
 }
 
